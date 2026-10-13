@@ -63,7 +63,7 @@ python make_table.py               # -> results/table1.tex
 python make_figure.py              # -> results/figure3.pdf (Scenario 2, K = 1024, realization 0)
 ```
 
-* The proposed method needs about one minute for all 1200 fits. The BTF methods need
+* All run times are for an Apple M3 Max; other machines will differ. The proposed method needs about one minute for all 1200 fits. The BTF methods need
   about 2.6 CPU-hours in total (5 to 14 s per fit), i.e. roughly 20 to 40 minutes with
   8 parallel processes (`--jobs`, default: number of cores minus 2).
 * Finished tasks are stored in `results/raw/` and skipped on a re-run, so an interrupted
