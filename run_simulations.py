@@ -16,9 +16,6 @@ Usage:
     python run_simulations.py                      # the full study (Table I)
     python run_simulations.py --methods proposed   # only the proposed method (no R needed)
     python run_simulations.py --jobs 8             # 8 parallel processes
-Cluster (one task per job, e.g. a SLURM array, see slurm/):
-    python run_simulations.py --num-tasks
-    python run_simulations.py --task 17
 """
 import os
 
@@ -110,27 +107,18 @@ def main():
     p.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 2),
                    help="Parallel processes (default: number of cores - 2).")
     p.add_argument("--out", type=Path, default=None, help="Output folder (default: results/).")
-    p.add_argument("--num-tasks", action="store_true", help="Print the number of tasks and exit.")
-    p.add_argument("--task", type=int, default=None, help="Run only this task (cluster use).")
     args = p.parse_args()
     if args.quick:
         args.K, args.realizations = [128], 5
     out_dir = args.out or Path("results_quick" if args.quick else "results")
 
     todo = tasks(args)
-    if args.num_tasks:
-        print(len(todo))
-        return
     if any(m != "proposed" for m, *_ in todo):
         from nupspline.btf import check_dsp
         try:
             print(f"R package dsp {check_dsp()}")
         except RuntimeError as e:
             sys.exit(f"error: {e}\n(or run only the proposed method: --methods proposed)")
-    if args.task is not None:
-        warm_up()
-        print(run_task(todo[args.task], out_dir))
-        return
 
     print(f"{len(todo)} tasks, {args.jobs} in parallel -> {out_dir}/raw/")
     t0 = time.time()

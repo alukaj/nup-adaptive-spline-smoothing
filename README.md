@@ -21,7 +21,6 @@ run_simulations.py         runs the study (all methods, scenarios, signals, K)
 make_table.py              builds Table I (LaTeX + console)
 make_figure.py             builds Fig. 3
 install_r_packages.R       installs the R package dsp
-slurm/run_array.sbatch     optional: run the study as a SLURM job array
 ```
 
 ## Installation
@@ -40,8 +39,7 @@ pip install -r requirements.txt     # numpy, numba, matplotlib
 Rscript install_r_packages.R        # installs dsp from CRAN (the paper uses dsp 1.6.0)
 ```
 
-On Linux, dsp is compiled from source and needs the GNU Scientific Library
-(e.g. `sudo apt install libgsl-dev`). Without R, the proposed method can still be run
+Without R, the proposed method can still be run
 on its own (`--methods proposed`, `--no-btf`).
 
 ## Quick check (about 2 minutes)
@@ -68,8 +66,6 @@ python make_figure.py              # -> results/figure3.pdf (Scenario 2, K = 102
   8 parallel processes (`--jobs`, default: number of cores minus 2).
 * Finished tasks are stored in `results/raw/` and skipped on a re-run, so an interrupted
   run can simply be restarted.
-* On a cluster, see `slurm/run_array.sbatch` (one task per array index; `--num-tasks`
-  gives the number of tasks).
 
 ## What is computed
 

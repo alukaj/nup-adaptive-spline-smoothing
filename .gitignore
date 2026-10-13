@@ -4,7 +4,6 @@ __pycache__/
 *.nbc
 results/
 results_quick/
-slurm-*.out
 *.aux
 *.log
 .DS_Store
