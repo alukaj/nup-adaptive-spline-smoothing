@@ -21,7 +21,7 @@ class Config:
     beta1: float = 3.0              # NUV prior of the level jumps U'_k        (Model 1)
     beta2: float = 1.0              # NUV prior of the jumps of qbar_k         (Model 2)
     beta3: float = 2.0              # NUV prior of the jumps of rbar_k         (Model 3)
-    alpha: float = float(np.sqrt(0.8))   # damping in (18)-(22): alpha^2 = 0.8
+    alpha: float = float(np.sqrt(0.8))   # damping in (17)-(21): alpha^2 = 0.8
     qbar_init: float = 0.5          # initial qbar_k = 1/q_k  (q_k = 2) for all k
     rbar_init: float = 0.5          # initial rbar_k = 1/r_k  (r_k = 2) for all k
     gamma_sq_init: float = 1e3      # initial gamma_{1,k}^2 = gamma_{2,k}^2 = gamma_{3,k}^2

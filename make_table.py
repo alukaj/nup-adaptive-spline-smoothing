@@ -1,7 +1,7 @@
 """
 Build Table I of the paper from the results of run_simulations.py.
 
-Top: average MSE over the realizations (eq. (23)) with its standard error in
+Top: average MSE over the realizations (eq. (22)) with its standard error in
 units of the last digit, e.g. 0.335(7) = 0.335 +- 0.007; best per row and
 scenario in bold.  Bottom: average run time per fit in seconds.
 

@@ -6,7 +6,7 @@ Run the simulation study of Sec. IV (Table I).
   signals: Blocks, Bumps, HeaviSine, Doppler;  K = 128, 512, 1024;
   100 realizations each.
 
-Every fit's MSE (eq. (23)) and run time (fit only, single core: the proposed
+Every fit's MSE (eq. (22)) and run time (fit only, single core: the proposed
 method after compilation, the BTF methods timed inside R) is written to
 results/raw/; make_table.py turns them into Table I.  Finished tasks are
 skipped, so an interrupted run is resumed by starting it again.

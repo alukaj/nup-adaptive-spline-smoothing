@@ -83,7 +83,7 @@ see exactly the same data.
 | 1 | BTF-DHS [8] | constant noise variance: `gamma_{3,k}^2 = 0` |
 | 2 | BTF-DHS-SV [8], BTF-DHS-ASV [9] | piecewise-constant noise variance |
 
-**Metrics.** MSE per realization as in (23), averaged over the realizations with its
+**Metrics.** MSE per realization as in (22), averaged over the realizations with its
 standard error. Run time per fit on a single core, measured for the fit only: the
 proposed method after numba compilation, the BTF methods inside R around `dsp_fit`
 (without R start-up). The run times in the paper were measured on an Apple M3 Max.
@@ -92,7 +92,7 @@ proposed method after numba compilation, the BTF methods inside R around `dsp_fi
 
 | Paper | Code (`nupspline/`) |
 |---|---|
-| observations `y~_k`, estimate `yhat_k` (15) | `y`, `fit(...)["y_hat"]` |
+| observations `y~_k`, estimate `yhat_k` (14) | `y`, `fit(...)["y_hat"]` |
 | `X_{k+1} = A X_k + B U_k + B' U'_k`, `Y~_k = C X_k + Z_k` (10), (6) | `ssm.build_ssm(m)` |
 | `m = 2` (cubic smoothing splines) | `Config.m` |
 | `q_k^2`, `r_k^2` | `fit(...)["q2"]`, `fit(...)["r2"]` |
@@ -102,8 +102,8 @@ proposed method after numba compilation, the BTF methods inside R around `dsp_fi
 | initial `qbar_k = rbar_k = 0.5`, `gamma_{i,k}^2 = 10^3` | `Config.qbar_init`, `rbar_init`, `gamma_sq_init` |
 | Scenario 1: `gamma_{3,k}^2 = 0` held fixed | `Config(constant_noise=True)` |
 | E-step: MBF in Model 1 | `smoother._mbf_model1` |
-| backward messages (18), (19) / (21), (22) | first loop of `smoother._update_model23` |
-| M-step (16) / (20): MBF in Model 2 / 3 (Fig. 2) | MBF loops of `smoother._update_model23` |
+| backward messages (16)-(18) / (20), (21) | first loop of `smoother._update_model23` |
+| M-step (15) / (19): MBF in Model 2 / 3 (Fig. 2) | MBF loops of `smoother._update_model23` |
 | 1000 EM iterations | `Config.n_iter` |
 | detected level jumps `gamma_{1,k}^2 > 1` | `fit(...)["gamma1_sq"] > 1` |
 

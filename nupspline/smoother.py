@@ -9,10 +9,10 @@ One EM iteration:
            r_k^2 = rbar_k^-2 and gamma_{1,k}^2  ->  posterior moments of
            U_k, U'_k, Z_k and the signal Y_k.
   M-step   gamma_{1,k}^2 = E[U'_k^2] / beta1                               (9)
-           Model 2: backward messages of qbar_k from E[U_k^2]           (18), (19)
-                    MBF in Model 2 -> new qbar_k (16) and the posterior of
+           Model 2: backward messages of qbar_k from E[U_k^2]           (17), (18)
+                    MBF in Model 2 -> new qbar_k (15) and the posterior of
                     its increments ~U_k; gamma_{2,k}^2 = E[~U_k^2] / beta2  (9)
-           Model 3: the same for rbar_k from E[Z_k^2]                   (20)-(22)
+           Model 3: the same for rbar_k from E[Z_k^2]                   (19)-(21)
 Models 2 and 3 (Fig. 2): Qbar'_k = Qbar'_{k-1} + ~U_k, ~U_k ~ N(0, gamma_{2,k}^2),
 Qbar_k = Qbar'_k (and the same for rbar with gamma_3).
 
@@ -165,7 +165,7 @@ def _mbf_model1(y, A, B, Bp, r2, q2, g1sq, x0_var,
 
 
 # ---------------------------------------------------------------------------
-# Models 2 and 3: backward messages (18)-(22), MBF, NUV update (9)
+# Models 2 and 3: backward messages (17)-(21), MBF, NUV update (9)
 # ---------------------------------------------------------------------------
 @njit(cache=True)
 def _update_model23(EV, VV, bar, xi_msg, gsq, alpha, beta, bar0_var, cap,
@@ -177,8 +177,8 @@ def _update_model23(EV, VV, bar, xi_msg, gsq, alpha, beta, bar0_var, cap,
     a2 = alpha ** 2
     reg = alpha ** (-2) - 1.0
     # backward messages in information form:
-    #   W_k  = 1 / sigma_k^2 = E[U_k^2] + (alpha^-2 - 1) bar_k^-2            (18)/(21)
-    #   xi_k = m_k / sigma_k^2 = alpha^-2 bar_k^-1                            (19)/(22)
+    #   W_k  = 1 / sigma_k^2 = E[U_k^2] + (alpha^-2 - 1) bar_k^-2            (17)/(20)
+    #   xi_k = m_k / sigma_k^2 = alpha^-2 bar_k^-1                            (18)/(21)
     for k in range(K):
         if bar[k] != 0.0:
             xi_msg[k] = 1.0 / (a2 * bar[k])
@@ -204,7 +204,7 @@ def _update_model23(EV, VV, bar, xi_msg, gsq, alpha, beta, bar0_var, cap,
         mX = mxp + vxp * e
         VX = vxp - vxp * g * vxp
 
-    # MBF backward: new bar_k (16)/(20) and the posterior of the increments ~U_k
+    # MBF backward: new bar_k (15)/(19) and the posterior of the increments ~U_k
     xitX = 0.0
     WtX = 0.0
     for i in range(K - 1, -1, -1):
