@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.nbi
+*.nbc
+results/
+results_quick/
+slurm-*.out
+*.aux
+*.log
+.DS_Store
+.venv/

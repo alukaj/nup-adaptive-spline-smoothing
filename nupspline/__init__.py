@@ -1,0 +1,7 @@
+"""Adaptive smoothing of time series with level jumps and time-varying noise
+via NUP priors -- code for the simulations of the paper."""
+from .config import Config
+from .smoother import fit, warm_up
+from .signals import SIGNALS, TITLES, ground_truth, realization
+
+__all__ = ["Config", "fit", "warm_up", "SIGNALS", "TITLES", "ground_truth", "realization"]
