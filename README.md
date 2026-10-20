@@ -59,7 +59,7 @@ Without R: `python run_simulations.py --quick --methods proposed`.
 
 ```bash
 python run_simulations.py          # 2 scenarios x 4 signals x K in {128, 512, 1024} x 100 realizations
-python time_fits.py                # run times of Table I: 40 fits per method and K, one at a time
+python time_fits.py                # run times of Table I: 10 realizations x 4 signals per method and K, one at a time
 python make_table.py               # -> results/tables.tex (Tables I and II)
 python make_figure.py              # -> results/figure3.pdf (Scenario 2, K = 1024, realization 0)
 ```
@@ -68,7 +68,9 @@ python make_figure.py              # -> results/figure3.pdf (Scenario 2, K = 102
   needs well under a minute for all 2400 fits. The dsp methods (BTF and ABCO) need about
   18 CPU-hours in total (1.5 to 12.5 s per fit plus R start-up), i.e. roughly 2 hours
   with 8 to 12 parallel processes (`--jobs`, default: number of cores minus 2).
-  `time_fits.py` runs one fit at a time and takes about 1.5 hours.
+  `time_fits.py` runs one fit at a time but only on the first 10 realizations
+  (10 x 4 signals = 40 fits per method, scenario and K; `--realizations`), so it takes
+  about 1.5 hours.
 * Finished tasks are stored in `results/raw/` (and `results/timing.json`) and skipped on a
   re-run, so an interrupted run can simply be restarted. Results of an earlier version of
   the code must be moved out of `results/` first.
