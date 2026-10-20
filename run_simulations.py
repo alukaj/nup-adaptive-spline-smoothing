@@ -1,19 +1,23 @@
 """
-Run the simulation study of Sec. IV (Table I).
+Run the simulation study of Sec. IV (Tables I and II).
 
-  Scenario 1 (noise variance 1):        BTF-DHS, proposed (constant noise variance)
-  Scenario 2 (noise variance 1/16/1):   BTF-DHS-SV, BTF-DHS-ASV, proposed
+  Scenario 1 (noise variance 1):       BTF-DHS, ABCO m=1, ABCO m=2 (constant noise
+                                       variance), proposed (gamma_{3,k}^2 = 0)
+  Scenario 2 (noise variance 1/16/1):  BTF-DHS-SV, BTF-DHS-ASV, ABCO-ASV m=1,
+                                       ABCO-ASV m=2, proposed
   signals: Blocks, Bumps, HeaviSine, Doppler;  K = 128, 512, 1024;
   100 realizations each.
 
-Every fit's MSE (eq. (22)) and run time (fit only, single core: the proposed
-method after compilation, the BTF methods timed inside R) is written to
-results/raw/; make_table.py turns them into Table I.  Finished tasks are
-skipped, so an interrupted run is resumed by starting it again.
+For every fit, the MSE and the run time are written to results/raw/, and for the
+methods that detect level jumps also the per-sample jump score (proposed:
+gamma_{1,k}^2 / q_k^2; ABCO: posterior changepoint probability).  make_table.py
+turns them into Tables I and II; the run-time rows of Table I come from
+time_fits.py (one fit at a time, as in the paper).  Finished tasks are skipped, so
+an interrupted run is resumed by starting it again.
 
 Usage:
     python run_simulations.py --quick              # small check: K = 128, 5 realizations
-    python run_simulations.py                      # the full study (Table I)
+    python run_simulations.py                      # the full study (Tables I and II)
     python run_simulations.py --methods proposed   # only the proposed method (no R needed)
     python run_simulations.py --jobs 8             # 8 parallel processes
 """
@@ -33,9 +37,14 @@ import numpy as np
 
 from nupspline import Config, SIGNALS, fit, realization, warm_up
 
-# method -> scenarios it is run in (Table I)
-METHODS = {"btf_dhs": [1], "btf_dhs_sv": [2], "btf_dhs_asv": [2], "proposed": [1, 2]}
-BTF_CHUNK = 25          # realizations per task for the (slow) BTF methods
+# method -> scenarios it is run in
+METHODS = {"btf_dhs": [1], "btf_dhs_sv": [2], "btf_dhs_asv": [2],
+           "abco_m1": [1], "abco_m2": [1], "abco_m1_asv": [2], "abco_m2_asv": [2],
+           "proposed": [1, 2]}
+# ABCO variants: method -> (m, obsSV)
+ABCO = {"abco_m1": (1, "const"), "abco_m2": (2, "const"),
+        "abco_m1_asv": (1, "ASV"), "abco_m2_asv": (2, "ASV")}
+R_CHUNK = 25            # realizations per task for the (slow) dsp methods
 
 
 def tasks(args):
@@ -47,7 +56,7 @@ def tasks(args):
                 continue
             for K in args.K:
                 for signal in SIGNALS:
-                    step = args.realizations if method == "proposed" else BTF_CHUNK
+                    step = args.realizations if method == "proposed" else R_CHUNK
                     for i0 in range(0, args.realizations, step):
                         out.append((method, scenario, signal, K, i0,
                                     min(args.realizations, i0 + step)))
@@ -60,15 +69,21 @@ def result_file(out_dir, task):
 
 
 def fit_one(method, scenario, y):
-    """Fit one realization; returns (y_hat, seconds)."""
+    """Fit one realization; returns (y_hat, seconds, jump score or None)."""
     if method == "proposed":
         cfg = Config(constant_noise=(scenario == 1))
         t0 = time.perf_counter()
-        y_hat = fit(y, cfg)["y_hat"]
-        return y_hat, time.perf_counter() - t0
+        est = fit(y, cfg)
+        seconds = time.perf_counter() - t0
+        return est["y_hat"], seconds, est["gamma1_sq"] / est["q2"]   # jump where > 1
+    if method in ABCO:
+        from nupspline.abco import fit_abco
+        m, obs_sv = ABCO[method]
+        res = fit_abco(y, m, obs_sv)
+        return res["y_hat"], res["seconds"], res["cp_prob"]         # jump where >= c
     from nupspline.btf import VARIANTS, fit_btf
     res = fit_btf(y, VARIANTS[method])
-    return res["y_hat"], res["seconds"]
+    return res["y_hat"], res["seconds"], None
 
 
 def run_task(task, out_dir):
@@ -76,16 +91,18 @@ def run_task(task, out_dir):
     if out.exists():
         return f"skip {out.name}"
     method, scenario, signal, K, i0, i1 = task
-    idx, mse, sec = [], [], []
+    idx, mse, sec, score = [], [], [], []
     for i in range(i0, i1):
         t, y_obs, y_true, r_true = realization(signal, K, scenario, i)
-        y_hat, seconds = fit_one(method, scenario, y_obs)
+        y_hat, seconds, s = fit_one(method, scenario, y_obs)
         idx.append(i)
         mse.append(float(np.mean((y_hat - y_true) ** 2)))
         sec.append(seconds)
+        score.append(s)
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(".tmp.npz")
-    np.savez(tmp, realization=np.array(idx), mse=np.array(mse), seconds=np.array(sec))
+    extra = {} if score[0] is None else {"jump_score": np.stack(score)}
+    np.savez(tmp, realization=np.array(idx), mse=np.array(mse), seconds=np.array(sec), **extra)
     os.replace(tmp, out)
     return f"{method:12s} scenario {scenario}  {signal:9s} K={K:<5d} i={i0}..{i1 - 1}  " \
            f"mean MSE {np.mean(mse):.4f}  ({np.mean(sec):.3f} s/fit)"

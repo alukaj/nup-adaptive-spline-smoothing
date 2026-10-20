@@ -1,6 +1,6 @@
 """
 Competitors: Bayesian trend filtering with dynamic horseshoe prior, from the
-authors' R package dsp [21] (called through Rscript):
+authors' R package dsp [22] (called through Rscript):
 
   BTF-DHS      [8]  constant noise variance               (Scenario 1)
   BTF-DHS-SV   [8]  log r_k^2 varies smoothly (SV)        (Scenario 2)

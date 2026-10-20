@@ -1,4 +1,4 @@
-# BTF-DHS competitors via the R package dsp [21] (Kowal, Matteson & Ruppert
+# BTF-DHS competitors via the R package dsp [22] (Kowal, Matteson & Ruppert
 # [8]; adaptive stochastic volatility: Cho & Matteson [9]), called by btf.py.
 #
 #   Rscript dsp_btf.R <in.txt> <out.txt> <obsSV> <nsave> <nburn> <nskip> <seed>

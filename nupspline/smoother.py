@@ -17,8 +17,7 @@ Models 2 and 3 (Fig. 2): Qbar'_k = Qbar'_{k-1} + ~U_k, ~U_k ~ N(0, gamma_{2,k}^2
 Qbar_k = Qbar'_k (and the same for rbar with gamma_3).
 
 Implementation notes: a prior X_0 ~ N(0, x0_var I) precedes the first
-observation in Model 1; Models 2 and 3 start from N(0, bar0_var); the NUV
-parameters gamma_{2,k}^2, gamma_{3,k}^2 are capped at gamma_sq_cap.  With
+observation in Model 1; Models 2 and 3 start from N(0, bar0_var).  With
 gamma_{3,k}^2 = 0 (Scenario 1) the EM update keeps it at 0, so Model 3 is an
 equality chain and one noise variance r^2 is estimated.
 
@@ -168,7 +167,7 @@ def _mbf_model1(y, A, B, Bp, r2, q2, g1sq, x0_var,
 # Models 2 and 3: backward messages (17)-(21), MBF, NUV update (9)
 # ---------------------------------------------------------------------------
 @njit(cache=True)
-def _update_model23(EV, VV, bar, xi_msg, gsq, alpha, beta, bar0_var, cap,
+def _update_model23(EV, VV, bar, xi_msg, gsq, alpha, beta, bar0_var,
                     W_msg, mXp, VXp, G, E, mUt, VUt):
     """One M-step of Model 2 (bar = qbar_k, EV/VV = posterior mean/variance of
     U_k) or Model 3 (bar = rbar_k, of Z_k).  bar, xi_msg and gsq (gamma_k^2)
@@ -223,8 +222,7 @@ def _update_model23(EV, VV, bar, xi_msg, gsq, alpha, beta, bar0_var, cap,
 
     # NUV update (9): gamma_k^2 = E[~U_k^2] / beta   (0 stays 0)
     for i in range(K):
-        v = (VUt[i] + abs(mUt[i]) ** 2) / beta
-        gsq[i] = v if v < cap else cap
+        gsq[i] = (VUt[i] + abs(mUt[i]) ** 2) / beta
 
 
 # ---------------------------------------------------------------------------
@@ -233,7 +231,7 @@ def _update_model23(EV, VV, bar, xi_msg, gsq, alpha, beta, bar0_var, cap,
 @njit(cache=True)
 def _em(y, A, B, Bp, use_jumps, n_iter, qbar_init, rbar_init,
         g2_init, g3_init, g1_init, beta1, beta2, beta3,
-        alpha, x0_var, bar0_var, cap):
+        alpha, x0_var, bar0_var):
     K = y.shape[0]
     m = A.shape[0]
     qbar = np.full(K, qbar_init)               # Model 2 variable, q_k = 1 / qbar_k
@@ -272,11 +270,11 @@ def _em(y, A, B, Bp, use_jumps, n_iter, qbar_init, rbar_init,
             mZ[k] = -(r2[k] * xiYt)
             VZ[k] = r2[k] - r2[k] * WtYt * r2[k]
         # M-step, Model 3 (rbar from E[Z_k^2]) and Model 2 (qbar from E[U_k^2])
-        _update_model23(mZ, VZ, rbar, xi_r, g3sq, alpha, beta3, bar0_var, cap,
+        _update_model23(mZ, VZ, rbar, xi_r, g3sq, alpha, beta3, bar0_var,
                         W_msg, m2, v2, g2, e2, mUt, VUt)
         for k in range(K):
             r[k] = 1.0 / rbar[k]
-        _update_model23(mU, VU, qbar, xi_q, g2sq, alpha, beta2, bar0_var, cap,
+        _update_model23(mU, VU, qbar, xi_q, g2sq, alpha, beta2, bar0_var,
                         W_msg, m2, v2, g2, e2, mUt, VUt)
         for k in range(K):
             q[k] = 1.0 / qbar[k]
@@ -284,17 +282,44 @@ def _em(y, A, B, Bp, use_jumps, n_iter, qbar_init, rbar_init,
     return yhat, r * r, q * q, g1sq
 
 
+def noise_level(y):
+    """Robust estimate of the noise standard deviation from the first differences:
+
+        sigma_hat = 1.4826 * MAD(diff(y)) / sqrt(2),   MAD(x) = median|x - median(x)|.
+
+    1.4826 = 1 / Phi^{-1}(3/4) turns the MAD of Gaussian data into its standard
+    deviation; sqrt(2) undoes the doubling of the noise variance by differencing.  The
+    median ignores the few large differences at level jumps and steep peaks; for rapidly
+    varying signals the estimate is biased upwards, which is harmless for its use as the
+    scale of the initial values."""
+    d = np.diff(np.asarray(y, float))
+    return float(1.4826 * np.median(np.abs(d - np.median(d))) / np.sqrt(2.0))
+
+
 def fit(y, cfg=None):
     """Run the proposed method on the observations y~_1..y~_K.
 
-    Returns dict:
+    With cfg.standardize (default), the method is applied to (y - median(y)) / sigma_hat,
+    sigma_hat = noise_level(y), and the estimates are transformed back, so that the
+    initial values in cfg are dimensionless and the result is invariant to the location
+    and scale of y.
+
+    Returns dict (in the units of y):
       y_hat      signal estimate yhat_k                                   (K,)
       r2         estimated noise variance r_k^2                          (K,)
       q2         estimated smoothing parameter q_k^2                     (K,)
-      gamma1_sq  estimated gamma_{1,k}^2; level jumps where > 1         (K,)
+      gamma1_sq  estimated gamma_{1,k}^2 of the level-jump input         (K,)
+      sigma_hat  the noise-level estimate used for standardization (1.0 without)
+    Level jumps: detect_jumps(result), i.e. where gamma1_sq > q2.
     """
     cfg = cfg or Config()
     y = np.ascontiguousarray(np.asarray(y, float).ravel())
+    loc, scale = 0.0, 1.0
+    if cfg.standardize:
+        loc, scale = float(np.median(y)), noise_level(y)
+        if not (np.isfinite(scale) and scale > 0):       # e.g. constant or tiny series
+            scale = float(np.std(y)) if np.std(y) > 0 else 1.0
+        y = (y - loc) / scale
     A, B, C, Bp = build_ssm(cfg.m)
     if not cfg.level_jumps:
         Bp = np.zeros_like(Bp)
@@ -305,8 +330,16 @@ def fit(y, cfg=None):
         0.0 if cfg.constant_noise else float(cfg.gamma_sq_init),       # gamma_{3,k}^2
         float(cfg.gamma_sq_init),                                      # gamma_{1,k}^2
         float(cfg.beta1), float(cfg.beta2), float(cfg.beta3), float(cfg.alpha),
-        float(cfg.x0_var), float(cfg.bar0_var), float(cfg.gamma_sq_cap))
-    return {"y_hat": y_hat, "r2": r2, "q2": q2, "gamma1_sq": g1sq}
+        float(cfg.x0_var), float(cfg.bar0_var))
+    s2 = scale * scale
+    return {"y_hat": loc + scale * y_hat, "r2": s2 * r2, "q2": s2 * q2,
+            "gamma1_sq": s2 * g1sq, "sigma_hat": scale}
+
+
+def detect_jumps(est):
+    """Indices k of the detected level jumps (between y_{k-1} and y_k):
+    gamma_{1,k}^2 > q_k^2, which is scale-free and has no tuning parameter."""
+    return np.flatnonzero(np.asarray(est["gamma1_sq"]) > np.asarray(est["q2"]))
 
 
 def warm_up():

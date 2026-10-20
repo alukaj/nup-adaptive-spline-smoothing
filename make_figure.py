@@ -1,13 +1,13 @@
 """
 Fig. 3 of the paper: one realization of Scenario 2 with K = 1024, all four
 signals.  Top three rows: proposed method (noisy data, ground truth, estimate
-yhat_k with detected level jumps gamma_{1,k}^2 > 1 as red dots; estimated
-q_k^2; true and estimated r_k^2).  Bottom three rows: BTF-DHS-ASV [9]
-(skipped with --no-btf, e.g. without R).
+yhat_k with detected level jumps gamma_{1,k}^2 > q_k^2 as red dots; estimated
+q_k^2; true and estimated r_k^2).  With --with-btf, three more rows show
+BTF-DHS-ASV [9] on the same data (needs R + dsp).
 
 Usage:
     python make_figure.py                 # -> results/figure3.pdf
-    python make_figure.py --no-btf --realization 3 --K 512
+    python make_figure.py --with-btf --realization 3 --K 512
 """
 import argparse
 from pathlib import Path
@@ -18,7 +18,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from nupspline import SIGNALS, TITLES, Config, fit, realization  # noqa: E402
+from nupspline import SIGNALS, TITLES, Config, detect_jumps, fit, realization  # noqa: E402
 
 
 def draw(axes, t, y_obs, y_true, r_true, est, jumps=None, show_legend=False):
@@ -46,28 +46,29 @@ def main():
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--K", type=int, default=1024)
     p.add_argument("--realization", type=int, default=0)
-    p.add_argument("--no-btf", action="store_true", help="Only the proposed method.")
+    p.add_argument("--with-btf", action="store_true",
+                   help="Add BTF-DHS-ASV on the same data (needs R + dsp).")
     p.add_argument("--out", type=Path, default=Path("results") / "figure3.pdf")
     args = p.parse_args()
 
-    n_rows = 3 if args.no_btf else 6
+    n_rows = 6 if args.with_btf else 3
     fig, axes = plt.subplots(n_rows, 4, figsize=(16, 2.0 * n_rows), sharex=True,
                              gridspec_kw={"height_ratios": [2, 1, 1] * (n_rows // 3)})
     for col, signal in enumerate(SIGNALS):
         t, y_obs, y_true, r_true = realization(signal, args.K, 2, args.realization)
         est = fit(y_obs, Config(constant_noise=False))
         draw(axes[0:3, col], t, y_obs, y_true, r_true, est,
-             jumps=est["gamma1_sq"] > 1.0, show_legend=(col == 3))
+             jumps=detect_jumps(est), show_legend=(col == 3))
         axes[0, col].set_title(TITLES[signal])
         mse = np.mean((est["y_hat"] - y_true) ** 2)
         print(f"{TITLES[signal]:10s} proposed     MSE {mse:.4f}")
-        if not args.no_btf:
+        if args.with_btf:
             from nupspline.btf import fit_btf
             btf = fit_btf(y_obs, "ASV")
             draw(axes[3:6, col], t, y_obs, y_true, r_true, btf, show_legend=(col == 3))
             print(f"{TITLES[signal]:10s} BTF-DHS-ASV  MSE {np.mean((btf['y_hat'] - y_true) ** 2):.4f}")
     axes[0, 0].set_ylabel("proposed")
-    if not args.no_btf:
+    if args.with_btf:
         axes[3, 0].set_ylabel("BTF-DHS-ASV")
     fig.tight_layout()
     args.out.parent.mkdir(parents=True, exist_ok=True)
