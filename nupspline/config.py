@@ -41,4 +41,4 @@ class Config:
 
     # ---- implementation details (not stated in the paper) -----------------
     x0_var: float = 1e3             # prior variance of the initial state of Model 1 (times I)
-    bar0_var: float = 1e6           # prior variance of the initial state of Models 2 and 3
+    bar0_var: float = 1e3           # prior variance of the initial state of Models 2 and 3

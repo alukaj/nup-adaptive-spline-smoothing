@@ -9,8 +9,9 @@ Table I.   Top: average MSE over the realizations with its standard error in uni
            shown instead (marked: measured with parallel processes).
 Table II.  Pooled F1 score of the detected level jumps (nupspline/jumps.py): proposed
            method (gamma_{1,k}^2 > q_k^2) and ABCO with m = 1, 2 at its default
-           threshold c = 0.5 and at the best c in {0.1, ..., 0.9} (in parentheses);
-           best per column in bold.
+           threshold c = 0.5 and at the best c in {0.05, 0.10, ..., 0.95}: one c per ABCO
+           variant, the one with the largest F1 pooled over both scenarios, all K and all
+           signals (as the proposed method uses one rule throughout); best per column in bold.
 
 Writes <results>/tables.tex (compiles on its own) and prints both tables.
 
@@ -72,8 +73,8 @@ def fmt_sec(x):
     return f"{s:.3f}" if s < 0.1 else (f"{s:.2f}" if s < 10 else f"{s:.1f}")
 
 
-def pooled_f1(data, scenario, method, K, thr):
-    """Pooled F1 over the four signals and all realizations, or None if missing."""
+def pooled_counts(data, scenario, method, K, thr):
+    """(TP, FP, FN) summed over the four signals and all realizations, or None if missing."""
     tp = fp = fn = 0
     for signal in SIGNALS:
         d = data.get((scenario, method, signal, K))
@@ -84,7 +85,25 @@ def pooled_f1(data, scenario, method, K, thr):
             det = detect(s, 1.0, strict=True) if method == "proposed" else detect(s, thr)
             a, b, c = counts(det, true)
             tp, fp, fn = tp + a, fp + b, fn + c
-    return f1(tp, fp, fn)
+    return tp, fp, fn
+
+
+def pooled_f1(data, scenario, method, K, thr):
+    """Pooled F1 over the four signals and all realizations, or None if missing."""
+    n = pooled_counts(data, scenario, method, K, thr)
+    return None if n is None else f1(*n)
+
+
+def best_threshold(data, methods, Ks):
+    """The c in ABCO_THRESHOLDS with the largest F1 pooled over both scenarios, all K and
+    all signals (the smaller c on ties), or None without results."""
+    res = []
+    for c in ABCO_THRESHOLDS:
+        n = [pooled_counts(data, scen, methods[scen], K, c) for scen in (1, 2) for K in Ks]
+        n = [x for x in n if x is not None]
+        if n:
+            res.append((f1(*np.sum(n, axis=0)), c))
+    return max(res, key=lambda t: (t[0], -t[1]))[1] if res else None
 
 
 def table1(data, timing, Ks):
@@ -124,20 +143,17 @@ def table2(data, Ks):
     """Rows of (label, [cell per (scenario, K)]), value matrix for the bold marks."""
     rows, vals = [], []
     for label, methods, thr in F1_ROWS:
+        missing = False
+        if thr == "best":
+            thr = best_threshold(data, methods, Ks)
+            missing = thr is None
+            if not missing:
+                label = label.replace("best $c$", f"best $c = {thr:g}$")
         cells, v = [], []
         for scen in (1, 2):
             for K in Ks:
-                m = methods[scen]
-                if thr == "best":
-                    res = [(pooled_f1(data, scen, m, K, c), c) for c in ABCO_THRESHOLDS]
-                    res = [(x, c) for x, c in res if x is not None]
-                    if not res:
-                        cells.append(None); v.append(np.nan); continue
-                    x, c = max(res, key=lambda t: (t[0], -t[1]))
-                    cells.append((x, c)); v.append(x)
-                else:
-                    x = pooled_f1(data, scen, m, K, thr)
-                    cells.append(None if x is None else (x, None)); v.append(np.nan if x is None else x)
+                x = None if missing else pooled_f1(data, scen, methods[scen], K, thr)
+                cells.append(None if x is None else (x, None)); v.append(np.nan if x is None else x)
         rows.append((label, cells)); vals.append(v)
     return rows, np.array(vals, float)
 
@@ -210,8 +226,9 @@ $K$ & Signal & DHS & ABCO & Prop. & SV & ASV & ASV & Prop. \\
 \begin{{table}}[t]
 \centering
 \caption{{Pooled $F_1$ score of the detected level jumps (hit: detection within 5 samples of a
-true jump, each matched at most once, adjacent detections merged). For ABCO, best $c$ in
-parentheses. Best per column in bold.}}
+true jump, each matched at most once). For ABCO, best $c$: the single threshold in
+$\{{0.05, 0.10, \dots, 0.95\}}$ with the largest $F_1$ pooled over both scenarios, all $K$ and
+all signals. Best per column in bold.}}
 \begin{{tabular}}{{l {cols2} {cols2}}}
 \toprule
  & \multicolumn{{{nK}}}{{c}}{{Scenario 1}} & \multicolumn{{{nK}}}{{c}}{{Scenario 2}} \\

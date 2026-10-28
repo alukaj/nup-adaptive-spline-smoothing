@@ -61,7 +61,8 @@ Without R: `python run_simulations.py --quick --methods proposed`.
 python run_simulations.py          # 2 scenarios x 4 signals x K in {128, 512, 1024} x 100 realizations
 python time_fits.py                # run times of Table I: 10 realizations x 4 signals per method and K, one at a time
 python make_table.py               # -> results/tables.tex (Tables I and II)
-python make_figure.py              # -> results/figure3.pdf (Scenario 2, K = 1024, realization 0)
+python make_figure.py              # -> results/figure3.pdf and the pgfplots version results/figure3/figure3.tex
+                                   #    (Scenario 2, K = 1024, realization 0)
 ```
 
 * Run times are for an Apple M3 Max; other machines will differ. The proposed method
@@ -115,10 +116,11 @@ location and scale of the data.
   jumps: Blocks (11) and HeaviSine (2); every detection on Bumps and Doppler is false.
   Proposed method: a jump at `k` if `gamma_{1,k}^2 > q_k^2`. ABCO: if the posterior
   changepoint probability is `>= c`, for the default `c = 0.5` and the best
-  `c in {0.1, ..., 0.9}`. Two adjacent detections count as one; a detection within 5
+  `c in {0.05, 0.10, ..., 0.95}`. Every flagged sample is a detection; a detection within 5
   samples of a true jump is a hit, each true jump being matched at most once (pairing with
-  the most hits). TP, FP and FN are summed over the four signals and all realizations
-  before computing `F1 = 2 TP / (2 TP + FP + FN)`.
+  the most hits), so two detections near the same true jump give one TP and one FP. TP,
+  FP and FN are summed over the four signals and all realizations before computing
+  `F1 = 2 TP / (2 TP + FP + FN)`.
 * *Run time* per fit on a single core, for the fit only: the proposed method after numba
   compilation, the dsp methods inside R around `dsp_fit` (without R start-up), averaged
   over 10 realizations x 4 signals (`time_fits.py`).
@@ -146,8 +148,8 @@ location and scale of the data.
 | F1 score of Table II | `jumps.py`, `make_table.pooled_f1` |
 
 Implementation details not stated in the paper (all in `config.py`, in units of
-`sigma_hat`): the initial state of Model 1 has the prior `N(0, 10^3 I)`, and Models 2
-and 3 start from `N(0, 10^6)`.
+`sigma_hat`): the initial states of Model 1 and of Models 2 and 3 have the priors
+`N(0, 10^3 I)` and `N(0, 10^3)`.
 
 ## Using the method on your own data
 
