@@ -8,7 +8,7 @@ Table I.   Top: average MSE over the realizations with its standard error in uni
            (time_fits.py); without it, the run times recorded by run_simulations.py are
            shown instead (marked: measured with parallel processes).
 Table II.  Pooled F1 score of the detected level jumps (nupspline/jumps.py): proposed
-           method (gamma_{1,k}^2 > q_k^2) and ABCO with m = 1, 2 at its default
+           method (sigma^2_{U'_k} > q_hat_k^2) and ABCO with m = 1, 2 at its default
            threshold c = 0.5 and at the best c in {0.05, 0.10, ..., 0.95}: one c per ABCO
            variant, the one with the largest F1 pooled over both scenarios, all K and all
            signals (as the proposed method uses one rule throughout); best per column in bold.
@@ -140,7 +140,7 @@ def table1(data, timing, Ks):
 
 
 def table2(data, Ks):
-    """Rows of (label, [cell per (scenario, K)]), value matrix for the bold marks."""
+    """Rows of (label, [F1 or None per (scenario, K)]), value matrix for the bold marks."""
     rows, vals = [], []
     for label, methods, thr in F1_ROWS:
         missing = False
@@ -153,7 +153,7 @@ def table2(data, Ks):
         for scen in (1, 2):
             for K in Ks:
                 x = None if missing else pooled_f1(data, scen, methods[scen], K, thr)
-                cells.append(None if x is None else (x, None)); v.append(np.nan if x is None else x)
+                cells.append(x); v.append(np.nan if x is None else x)
         rows.append((label, cells)); vals.append(v)
     return rows, np.array(vals, float)
 
@@ -178,15 +178,13 @@ def main():
     f1_tex, f1_txt = [], []
     for r, (label, cells) in enumerate(f1_rows):
         tex, txt = [], []
-        for j, cell in enumerate(cells):
-            if cell is None:
+        for j, x in enumerate(cells):
+            if x is None:
                 tex.append("--"); txt.append("--"); continue
-            x, c = cell
             s = f"{x:.2f}"
             bold = np.isfinite(best[j]) and round(x, 2) == round(best[j], 2)
-            t = rf"\textbf{{{s}}}" if bold else s
-            tex.append(t + (f"$_{{({c:g})}}$" if c is not None else ""))
-            txt.append(("*" if bold else "") + s + (f"({c:g})" if c is not None else ""))
+            tex.append(rf"\textbf{{{s}}}" if bold else s)
+            txt.append(("*" if bold else "") + s)
         f1_tex.append(f"{label} & " + " & ".join(tex) + r" \\")
         if r in (0, 2):
             f1_tex.append(r"\midrule")

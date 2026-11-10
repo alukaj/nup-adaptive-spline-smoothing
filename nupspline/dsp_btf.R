@@ -6,7 +6,8 @@
 # in.txt : one observation per line (standardised by the caller, as the dsp
 #          documentation recommends)
 # out.txt: K rows: posterior means of mu_k, sigma_k^2 and the evolution
-#          variance (tau lambda_k)^2
+#          variance (tau lambda_k)^2 (NA for the first D = 2 rows: variances of
+#          the initial states, not of the second differences)
 # obsSV  : "const" (BTF-DHS), "SV" (BTF-DHS-SV) or "ASV" (BTF-DHS-ASV); all
 #          other options are dsp_spec / dsp_fit defaults
 # stdout : "ELAPSED <seconds>": run time of dsp_fit alone (no R start-up,
@@ -27,7 +28,9 @@ t_fit <- system.time({
                    computeDIC = FALSE, verbose = FALSE, seed = seed)
 })[["elapsed"]]
 o <- fit$mcmc_output
-out <- cbind(colMeans(o$mu), colMeans(o$obs_sigma_t2), colMeans(o$evol_sigma_t2))
+evol <- colMeans(o$evol_sigma_t2)
+evol[1:2] <- NA                             # initial states, not evolution variances
+out <- cbind(colMeans(o$mu), colMeans(o$obs_sigma_t2), evol)
 write.table(format(out, digits = 17), args[2], row.names = FALSE, col.names = FALSE,
             quote = FALSE)
 cat(sprintf("ELAPSED %.6f\n", t_fit))

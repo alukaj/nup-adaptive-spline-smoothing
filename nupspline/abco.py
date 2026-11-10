@@ -27,8 +27,10 @@ def fit_abco(y, m=1, obs_sv="const", nsave=1000, nburn=1000, nskip=4, seed=None)
     """Fit ABCO with dsp.
 
     Returns dict: y_hat (posterior mean of the trend), cp_prob (posterior
-    changepoint probability per k, NaN for the first m entries), seconds (run
-    time of dsp_fit inside R)."""
+    changepoint probability per k, NaN for the first m entries), q2 (posterior
+    mean of the evolution variance of the m-th differences, NaN for the first m
+    entries), r2 (posterior mean of the noise variance per k), seconds (run time
+    of dsp_fit inside R)."""
     if m not in (1, 2):
         raise ValueError("m must be 1 or 2")
     y = np.asarray(y, float).ravel()
@@ -46,4 +48,5 @@ def fit_abco(y, m=1, obs_sv="const", nsave=1000, nburn=1000, nskip=4, seed=None)
         out = np.genfromtxt(f_out, missing_values="NA", filling_values=np.nan, ndmin=2)
     seconds = next((float(l.split()[1]) for l in r.stdout.splitlines()
                     if l.startswith("ELAPSED ")), float("nan"))
-    return {"y_hat": loc + scale * out[:, 0], "cp_prob": out[:, 1], "seconds": seconds}
+    return {"y_hat": loc + scale * out[:, 0], "cp_prob": out[:, 1],
+            "q2": scale ** 2 * out[:, 2], "r2": scale ** 2 * out[:, 3], "seconds": seconds}

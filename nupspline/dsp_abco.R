@@ -7,9 +7,11 @@
 # D      : order of the differences of the trend (the paper's m), 1 or 2
 # obsSV  : "const" (Scenario 1) or "ASV" (Scenario 2); all other options are
 #          dsp_spec / dsp_fit defaults
-# out.txt: K rows: posterior mean of the trend, and the posterior changepoint
-#          probability P(omega_k^2 > exp(threshold) | data) of dsp's predict()
-#          (NA for the first D rows)
+# out.txt: K rows: posterior mean of the trend, the posterior changepoint
+#          probability P(omega_k^2 > exp(threshold) | data) of dsp's predict(),
+#          and the posterior means of the evolution variance omega_k^2 of the
+#          D-th differences and of the noise variance sigma_k^2 (columns 2 and 3
+#          NA for the first D rows)
 # stdout : "ELAPSED <seconds>": run time of dsp_fit alone
 suppressPackageStartupMessages(library(dsp))
 
@@ -27,8 +29,11 @@ t_fit <- system.time({
     fit <- dsp_fit(y, model_spec = spec, nsave = nsave, nburn = nburn, nskip = nskip,
                    computeDIC = FALSE, verbose = FALSE, seed = seed)
 })[["elapsed"]]
+o <- fit$mcmc_output
 cp_prob <- c(rep(NA, D), predict(fit, cp_thres = 0.5, cp_prop = TRUE)$cp_prop)
-out <- cbind(colMeans(fit$mcmc_output$mu), cp_prob)
+evol <- colMeans(o$evol_sigma_t2)
+evol[seq_len(D)] <- NA                      # dsp's diffuse initial variances, not estimates
+out <- cbind(colMeans(o$mu), cp_prob, evol, colMeans(o$obs_sigma_t2))
 write.table(format(out, digits = 17), args[2], row.names = FALSE, col.names = FALSE,
             quote = FALSE)
 cat(sprintf("ELAPSED %.6f\n", t_fit))

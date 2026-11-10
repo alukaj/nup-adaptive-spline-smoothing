@@ -1,5 +1,5 @@
 """
-State-space representation of Delta^m Y_k = U_k (Sec. II-B, eq. (7); [20, eq. (39)]).
+State-space representation of Delta^m Y_k = U_k (Sec. II-B, eqs. (5)-(8); [21, eq. (39)]).
 
 State X_k = [Y_{k+m-1}, ..., Y_{k+1}, Y_k]^T in R^m,
 
@@ -10,7 +10,7 @@ State X_k = [Y_{k+m-1}, ..., Y_{k+1}, Y_k]^T in R^m,
 
 B = [1, 0, ..., 0]^T (U_k enters the first component), C = [0, ..., 0, 1]
 (Y_k is the last component) and B' = [1, ..., 1]^T (the level jump U'_k
-shifts all states equally, Sec. II-C).  For m = 2: A = [[2, -1], [1, 0]].
+shifts all states equally, Sec. II-C, eq. (9)).  For m = 2: A = [[2, -1], [1, 0]].
 """
 from math import comb
 

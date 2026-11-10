@@ -6,7 +6,7 @@ lies between y_{k-1} and y_k for the first k with t_k > p.  Bumps and Doppler ha
 jumps, so every detection on them is a false positive.
 
 Detections from a per-sample score s_k and a threshold c:
-  proposed method   s_k = gamma_{1,k}^2 / q_k^2,  jump where s_k > 1
+  proposed method   s_k = sigma^2_{U'_k} / q_hat_k^2,  jump where s_k > 1 (Sec. IV-B)
   ABCO              s_k = posterior changepoint probability,  jump where s_k >= c
 Every flagged sample is a detection; adjacent flagged samples are not merged.
 

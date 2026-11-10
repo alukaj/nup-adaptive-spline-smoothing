@@ -48,7 +48,9 @@ def fit_btf(y, obs_sv="const", nsave=1000, nburn=1000, nskip=4, seed=None):
     """Fit BTF-DHS with dsp.  obs_sv: "const", "SV" or "ASV".
 
     Returns dict: y_hat (posterior mean of the signal), r2 (posterior mean of
-    the noise variance per k), seconds (run time of dsp_fit inside R)."""
+    the noise variance per k), q2 (posterior mean of the evolution variance of
+    the second differences, NaN for the first 2 entries), seconds (run time of
+    dsp_fit inside R)."""
     y = np.asarray(y, float).ravel()
     if seed is None:
         seed = zlib.crc32(np.ascontiguousarray(y).tobytes()) % (2 ** 31 - 1)
@@ -61,7 +63,7 @@ def fit_btf(y, obs_sv="const", nsave=1000, nburn=1000, nskip=4, seed=None):
                            capture_output=True, text=True)
         if r.returncode != 0 or not f_out.exists():
             raise RuntimeError(f"dsp failed (obsSV={obs_sv}):\n{r.stderr[-2000:]}")
-        out = np.loadtxt(f_out, ndmin=2)
+        out = np.genfromtxt(f_out, missing_values="NA", filling_values=np.nan, ndmin=2)
     seconds = next((float(l.split()[1]) for l in r.stdout.splitlines()
                     if l.startswith("ELAPSED ")), float("nan"))
     return {"y_hat": loc + scale * out[:, 0], "r2": scale ** 2 * out[:, 1],

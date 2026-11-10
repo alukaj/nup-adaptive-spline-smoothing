@@ -2,7 +2,7 @@
 Run the simulation study of Sec. IV (Tables I and II).
 
   Scenario 1 (noise variance 1):       BTF-DHS, ABCO m=1, ABCO m=2 (constant noise
-                                       variance), proposed (gamma_{3,k}^2 = 0)
+                                       variance), proposed (S_k = 0)
   Scenario 2 (noise variance 1/16/1):  BTF-DHS-SV, BTF-DHS-ASV, ABCO-ASV m=1,
                                        ABCO-ASV m=2, proposed
   signals: Blocks, Bumps, HeaviSine, Doppler;  K = 128, 512, 1024;
@@ -10,7 +10,7 @@ Run the simulation study of Sec. IV (Tables I and II).
 
 For every fit, the MSE and the run time are written to results/raw/, and for the
 methods that detect level jumps also the per-sample jump score (proposed:
-gamma_{1,k}^2 / q_k^2; ABCO: posterior changepoint probability).  make_table.py
+sigma^2_{U'_k} / q_hat_k^2; ABCO: posterior changepoint probability).  make_table.py
 turns them into Tables I and II; the run-time rows of Table I come from
 time_fits.py (one fit at a time, as in the paper).  Finished tasks are skipped, so
 an interrupted run is resumed by starting it again.
@@ -35,7 +35,7 @@ from pathlib import Path
 
 import numpy as np
 
-from nupspline import Config, SIGNALS, fit, realization, warm_up
+from nupspline import Config, SIGNALS, fit, jump_score, realization, warm_up
 
 # method -> scenarios it is run in
 METHODS = {"btf_dhs": [1], "btf_dhs_sv": [2], "btf_dhs_asv": [2],
@@ -75,7 +75,7 @@ def fit_one(method, scenario, y):
         t0 = time.perf_counter()
         est = fit(y, cfg)
         seconds = time.perf_counter() - t0
-        return est["y_hat"], seconds, est["gamma1_sq"] / est["q2"]   # jump where > 1
+        return est["y_hat"], seconds, jump_score(est)                # jump where > 1
     if method in ABCO:
         from nupspline.abco import fit_abco
         m, obs_sv = ABCO[method]

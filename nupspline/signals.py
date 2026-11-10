@@ -14,7 +14,7 @@ process and machine sees exactly the same data.
 """
 import numpy as np
 
-SIGNALS = ("blocks", "bumps", "heavisine", "doppler")          # order of Table I / Fig. 3
+SIGNALS = ("blocks", "bumps", "heavisine", "doppler")          # order of Table I / Figs. 2, 3
 TITLES = {"blocks": "Blocks", "bumps": "Bumps", "heavisine": "HeaviSine", "doppler": "Doppler"}
 NOISE_SD = {1: (1.0, 1.0, 1.0), 2: (1.0, 4.0, 1.0)}              # per segment, per scenario
 SEGMENT_BOUNDS = (0.33, 0.66)
